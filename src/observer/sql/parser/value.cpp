@@ -95,7 +95,7 @@ Value::Value(const char*date,int len, int flag)
   if (fl==1)
     set_date(intDate);
   else if(fl==0)
-    LOG_WARN("FAILURE");
+    LOG_WARN("FAILURE\n");
 }
 
 void Value::set_data(char *data, int length)
