@@ -51,9 +51,15 @@ void intDate2strDate(std::string &strDate,int intDate){
   temp=intDate/10000;
   strDate+=std::to_string(temp)+"-";
   temp=(intDate%10000)/100;
-  strDate+=std::to_string(temp)+"-";
+  if(temp<10)
+    strDate+="0"+std::to_string(temp)+"-";
+  else
+    strDate+=std::to_string(temp)+"-";
   temp=intDate%100;
-  strDate+=std::to_string(temp);
+  if(temp<10)
+    strDate+="0"+std::to_string(temp);
+  else
+    strDate+=std::to_string(temp);
 }
 
 const char *attr_type_to_string(AttrType type)
