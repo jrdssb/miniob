@@ -22,6 +22,12 @@ See the Mulan PSL v2 for more details. */
 
 const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "booleans","dates"};
 
+bool correctDate(int y,int m,int d){
+  static int mon[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  bool leap = (y%400==0 || (y%100 && y%4==0));
+  return y > 0 && (m > 0) && (m <= 12) && (d > 0) && (d <= ((m==2 && leap)?1:0) + mon[m]);
+}
+
 void strDate2intDate(const char* strDate,int& intDate)
 {
   int weight = 10000; 
@@ -79,7 +85,11 @@ Value::Value(const char*date,int len, int flag)
 { 
   int intDate=0;
   strDate2intDate(date,intDate);
-  set_date(intDate);
+  bool fl=correctDate(intDate/10000,(intDate%10000)/100,intDate%100);
+  if (fl==1)
+    set_date(intDate);
+  else if(fl==0)
+    LOG_WARN("FAILURE");
 }
 
 void Value::set_data(char *data, int length)
