@@ -83,7 +83,6 @@ public:
   bool        get_boolean() const;
   int         get_date() const;//实现
 
-private:
   AttrType attr_type_ = UNDEFINED;
   int      length_    = 0;
 
@@ -97,6 +96,5 @@ private:
   std::string str_value_;
 };
 
-bool is_leap_year(int year);
 void strDate2intDate(const char* strDate,int& intDate);
 void intDate2strDate(std::string &strDate,int intDate);

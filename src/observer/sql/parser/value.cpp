@@ -11,6 +11,7 @@ See the Mulan PSL v2 for more details. */
 //
 // Created by WangYunlai on 2023/06/28.
 //
+#include "common/rc.h"
 
 #include "sql/parser/value.h"
 #include "common/lang/comparator.h"
@@ -21,6 +22,7 @@ See the Mulan PSL v2 for more details. */
 #include <stdlib.h> 
 
 const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "booleans","dates"};
+bool fl=true;
 
 bool correctDate(int y,int m,int d){
   static int mon[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -91,11 +93,7 @@ Value::Value(const char*date,int len, int flag)
 { 
   int intDate=0;
   strDate2intDate(date,intDate);
-  bool fl=correctDate(intDate/10000,(intDate%10000)/100,intDate%100);
-  if (fl==1)
-    set_date(intDate);
-  else if(fl==0)
-    LOG_WARN("FAILURE\n");
+  set_date(intDate);
 }
 
 void Value::set_data(char *data, int length)
@@ -159,9 +157,15 @@ void Value::set_string(const char *s, int len /*= 0*/)
 
 void Value::set_date(int val)
 {
-    attr_type_=DATES;
-    num_value_.date_value_=val;
-    length_=sizeof(val);
+    fl=correctDate(val/10000,(val%10000)/100,val%100);
+    if(fl==false){
+      ASSERT(false, "FAILURE");
+    }
+    else{
+      attr_type_=DATES;
+      num_value_.date_value_=val;
+      length_=sizeof(val);
+    }
 }
 
 void Value::set_value(const Value &value)
