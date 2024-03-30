@@ -22,6 +22,7 @@ See the Mulan PSL v2 for more details. */
 bool fl=true;
 const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "booleans","dates"};
 
+
 bool correctDate(int y,int m,int d){
   static int mon[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
   bool leap = (y%400==0 || (y%100 && y%4==0));
@@ -157,9 +158,8 @@ void Value::set_date(int val)
 {
     fl=correctDate(val/10000,(val%10000)/100,val%100);
     if(fl==false){
-      //在解析不符合规范条件下需要只输出FALIURE
+      //在解析不符合规范条件下需要只输出FALIURE并结束当前语句
 
-      fl=false;
     }
     else{
       attr_type_=DATES;

@@ -12,7 +12,6 @@ See the Mulan PSL v2 for more details. */
 // Created by Wangyunlai on 2024/01/10.
 //
 
-#include "sql/parser/value.h"
 #include "net/sql_task_handler.h"
 #include "net/communicator.h"
 #include "event/session_event.h"
@@ -54,6 +53,7 @@ RC SqlTaskHandler::handle_event(Communicator *communicator)
 
 RC SqlTaskHandler::handle_sql(SQLStageEvent *sql_event)
 {
+  
   RC rc = query_cache_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do query cache. rc=%s", strrc(rc));
@@ -61,6 +61,7 @@ RC SqlTaskHandler::handle_sql(SQLStageEvent *sql_event)
   }
 
   rc = parse_stage_.handle_request(sql_event);
+
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do parse. rc=%s", strrc(rc));
     return rc;
