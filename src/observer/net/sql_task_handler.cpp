@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 // Created by Wangyunlai on 2024/01/10.
 //
 
+#include "sql/parser/value.h"
 #include "net/sql_task_handler.h"
 #include "net/communicator.h"
 #include "event/session_event.h"

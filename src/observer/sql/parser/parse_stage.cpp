@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 
 #include "parse_stage.h"
+#include "value.cpp"
 
 #include "common/conf/ini.h"
 #include "common/io/io.h"

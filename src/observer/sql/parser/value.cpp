@@ -12,7 +12,6 @@ See the Mulan PSL v2 for more details. */
 // Created by WangYunlai on 2023/06/28.
 //
 #include "common/rc.h"
-
 #include "sql/parser/value.h"
 #include "common/lang/comparator.h"
 #include "common/lang/string.h"
@@ -20,9 +19,8 @@ See the Mulan PSL v2 for more details. */
 #include <sstream>
 #include <string.h>
 #include <stdlib.h> 
-
-const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "booleans","dates"};
 bool fl=true;
+const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "booleans","dates"};
 
 bool correctDate(int y,int m,int d){
   static int mon[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -159,7 +157,9 @@ void Value::set_date(int val)
 {
     fl=correctDate(val/10000,(val%10000)/100,val%100);
     if(fl==false){
-      ASSERT(false, "FAILURE");
+      //在解析不符合规范条件下需要只输出FALIURE
+
+      fl=false;
     }
     else{
       attr_type_=DATES;
