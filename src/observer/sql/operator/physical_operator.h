@@ -47,6 +47,7 @@ enum class PhysicalOperatorType
   STRING_LIST,
   DELETE,
   INSERT,
+  AGGREGATE,
 };
 
 /**
@@ -78,6 +79,11 @@ public:
 
   std::vector<std::unique_ptr<PhysicalOperator>> &children() { return children_; }
 
+  std::vector<AggrOp> getAggrType(){ 
+    std::vector<AggrOp> emptyVector;  
+    return emptyVector; 
+  }
+  std::vector<AggrOp> aggregationsRes;
 protected:
   std::vector<std::unique_ptr<PhysicalOperator>> children_;
 };

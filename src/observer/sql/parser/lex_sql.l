@@ -110,7 +110,14 @@ ROLLBACK                                RETURN_TOKEN(TRX_ROLLBACK);
 INT                                     RETURN_TOKEN(INT_T);
 CHAR                                    RETURN_TOKEN(STRING_T);
 FLOAT                                   RETURN_TOKEN(FLOAT_T);
+
 DATE                                    RETURN_TOKEN(DATE_T);
+SUM                                     RETURN_TOKEN(SUM_F);
+AVG                                     RETURN_TOKEN(AVG_F);
+MAX                                     RETURN_TOKEN(MAX_F);
+MIN                                     RETURN_TOKEN(MIN_F);
+COUNT                                   RETURN_TOKEN(COUNT_F);
+
 LOAD                                    RETURN_TOKEN(LOAD);
 DATA                                    RETURN_TOKEN(DATA);
 INFILE                                  RETURN_TOKEN(INFILE);

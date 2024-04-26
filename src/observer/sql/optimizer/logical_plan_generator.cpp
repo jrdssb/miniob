@@ -12,6 +12,8 @@ See the Mulan PSL v2 for more details. */
 // Created by Wangyunlai on 2023/08/16.
 //
 
+#include<iostream>
+
 #include "sql/optimizer/logical_plan_generator.h"
 
 #include <common/log/log.h>
@@ -25,6 +27,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/predicate_logical_operator.h"
 #include "sql/operator/project_logical_operator.h"
 #include "sql/operator/table_get_logical_operator.h"
+#include "sql/operator/aggregate_logical_operator.h"
 
 #include "sql/stmt/calc_stmt.h"
 #include "sql/stmt/delete_stmt.h"
@@ -82,10 +85,17 @@ RC LogicalPlanGenerator::create_plan(CalcStmt *calc_stmt, std::unique_ptr<Logica
   return RC::SUCCESS;
 }
 
+/*select逻辑操作的函数中，可以发现table_get_oper, predicate_oper和project_oper三个逻辑算子
+这三个逻辑算子的执行顺序为：
+table_get_oper -> predicate_oper -> project_oper
+add_child可以理解为添加子操作，一般来说子操作完成后才能执行主操作，
+所以越底层的child被执行的优先级越高。*/
 RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<LogicalOperator> &logical_operator)
 {
+  //table_oper逻辑算子
   unique_ptr<LogicalOperator> table_oper(nullptr);
 
+  //数据预处理，提取
   const std::vector<Table *> &tables     = select_stmt->tables();
   const std::vector<Field>   &all_fields = select_stmt->query_fields();
   for (Table *table : tables) {
@@ -96,17 +106,21 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       }
     }
 
+    //创建能获取表中数据的变量
     unique_ptr<LogicalOperator> table_get_oper(new TableGetLogicalOperator(table, fields, true /*readonly*/));
     if (table_oper == nullptr) {
       table_oper = std::move(table_get_oper);
     } else {
       JoinLogicalOperator *join_oper = new JoinLogicalOperator;
+
+      //add_child链接和执行多个逻辑算子
       join_oper->add_child(std::move(table_oper));
       join_oper->add_child(std::move(table_get_oper));
       table_oper = unique_ptr<LogicalOperator>(join_oper);
     }
   }
 
+  //predicate_oper逻辑算子
   unique_ptr<LogicalOperator> predicate_oper;
 
   RC                          rc = create_plan(select_stmt->filter_stmt(), predicate_oper);
@@ -115,6 +129,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     return rc;
   }
 
+  //project_oper逻辑算子  
   unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(all_fields));
   if (predicate_oper) {
     if (table_oper) {
@@ -127,7 +142,33 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     }
   }
 
-  logical_operator.swap(project_oper);
+  //aggregate_oper算子
+  //判断是否需要聚合
+  bool aggr_flag=false;
+  for(auto field:all_fields){
+    if(field.aggregation()!=AggrOp::AGGR_NONE){
+      aggr_flag=true;
+      break;
+    }
+  }
+
+  if(aggr_flag){
+    //std::cout<<"stage4:need to aggregate"<<std::endl;
+    unique_ptr<LogicalOperator> aggregate_oper(new AggregateLogicalOperator(all_fields));
+    aggregate_oper->add_child(std::move(project_oper));
+    logical_operator.swap(aggregate_oper);
+  }else{
+    logical_operator.swap(project_oper);
+  }
+  //此时select操作已经添加了聚合算子，接下来rewrite和optimize暂时不需要考虑，
+  //直接进入物理计划的创建步骤。
+  
+  //logical_operator.swap(project_oper);
+
+  /*聚合是对最终得到的元组中的某些字段进行的操作，
+  可以很容易地确定聚合算子的位置应该在project_oper之后，定义聚合算子为aggregate_oper，
+  添加了聚合算子后的算子执行顺序为：
+    table_get_oper -> predicate_oper -> project_oper -> aggregate_oper*/
   return RC::SUCCESS;
 }
 

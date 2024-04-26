@@ -77,7 +77,17 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         INT_T
         STRING_T
         FLOAT_T
+
+/*--------------------------------修改---------------------------------*/
         DATE_T
+        SUM_F
+        AVG_F
+        MAX_F
+        MIN_F
+        COUNT_F
+        /*定义解析规则*/
+/*--------------------------------修改---------------------------------*/
+
         HELP
         EXIT
         DOT //QUOTE
@@ -105,14 +115,19 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   ConditionSqlNode *                condition;
   Value *                           value;
   enum CompOp                       comp;
+  enum AggrOp                       aggr;
+
   RelAttrSqlNode *                  rel_attr;
+
   std::vector<AttrInfoSqlNode> *    attr_infos;
   AttrInfoSqlNode *                 attr_info;
   Expression *                      expression;
   std::vector<Expression *> *       expression_list;
   std::vector<Value> *              value_list;
   std::vector<ConditionSqlNode> *   condition_list;
+
   std::vector<RelAttrSqlNode> *     rel_attr_list;
+
   std::vector<std::string> *        relation_list;
   char *                            string;
   int                               number;
@@ -132,7 +147,9 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <value>               value
 %type <number>              number
 %type <comp>                comp_op
+%type <aggr>                aggr_op
 %type <rel_attr>            rel_attr
+%type <rel_attr>            rel_attr_aggr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
 %type <value_list>          value_list
@@ -140,7 +157,10 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <condition_list>      condition_list
 %type <rel_attr_list>       select_attr
 %type <relation_list>       rel_list
+
 %type <rel_attr_list>       attr_list
+%type <rel_attr_list>       rel_attr_aggr_list
+
 %type <expression>          expression
 %type <expression_list>     expression_list
 %type <sql_node>            calc_stmt
@@ -425,8 +445,12 @@ update_stmt:      /*  update 语句的语法解析树*/
       free($4);
     }
     ;
+
+/*--------------------------------------修改--------------------------------------------*/
 select_stmt:        /*  select 语句的语法解析树*/
     SELECT select_attr FROM ID rel_list where
+    /*1.rel_list是一个递归解析结构*/
+    /*2.对select_attr的属性增加一个聚合的标识，在后续处理时根据聚合标识来进行判断*/
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
       if ($2 != nullptr) {
@@ -447,6 +471,8 @@ select_stmt:        /*  select 语句的语法解析树*/
       free($4);
     }
     ;
+/*--------------------------------------修改--------------------------------------------*/
+
 calc_stmt:
     CALC expression_list
     {
@@ -500,6 +526,30 @@ expression:
     }
     ;
 
+/*--------------------------------修改---------------------------------*/
+/*aggr->...->resolve_stage  返回ParsedSqlNode*/
+
+  /*添加aggr_op解析规则*/
+aggr_op:
+  /*AGGR_SUM为解析返回给程序后续使用的常量*/
+    SUM_F { 
+      $$=AGGR_SUM; 
+    }
+    | MAX_F { 
+      $$=AGGR_MAX; 
+    }
+    | MIN_F{
+      $$=AGGR_MIN;
+    }
+    | AVG_F{
+      $$=AGGR_AVG;
+    }
+    | COUNT_F{
+      $$=AGGR_COUNT;
+    }
+
+    ;
+
 select_attr:
     '*' {
       $$ = new std::vector<RelAttrSqlNode>;
@@ -508,6 +558,7 @@ select_attr:
       attr.attribute_name = "*";
       $$->emplace_back(attr);
     }
+    /*通过修改rel_attr和attr_list的解析树定义来实现单个或多个字段的聚合功能*/
     | rel_attr attr_list {
       if ($2 != nullptr) {
         $$ = $2;
@@ -532,7 +583,44 @@ rel_attr:
       free($1);
       free($3);
     }
+    /*添加聚合解析规则，其中aggr_op为函数类型的解析(sum,avg,max...)，还需要再写一个aggr_op的解析*/
+    | aggr_op LBRACE rel_attr_aggr rel_attr_aggr_list RBRACE {
+      $$=$3;
+      $$->aggregation=$1;
+      if($4!=nullptr){
+        $$->valid=false;
+        delete $4;
+      }
+    }
+    | aggr_op LBRACE RBRACE{
+      $$ = new RelAttrSqlNode;
+      $$->relation_name  = "";
+      $$->attribute_name = "";
+      $$->aggregation=$1;
+      $$->valid=false;
+    }
     ;
+
+
+rel_attr_aggr:
+  '*'{
+    $$=new RelAttrSqlNode;
+    $$->relation_name="";
+    $$->attribute_name="*";
+  }
+  |ID{
+    $$=new RelAttrSqlNode;
+    $$->attribute_name=$1;
+    free($1);
+  } 
+  | ID DOT ID{
+    $$=new RelAttrSqlNode;
+    $$->relation_name=$1;
+    $$->attribute_name=$3;
+    free($1);
+    free($3);
+  }
+  ;
 
 attr_list:
     /* empty */
@@ -552,10 +640,11 @@ attr_list:
     ;
 
 rel_list:
-    /* empty */
+    /* rel_list为空时解析（查询单表） */
     {
       $$ = nullptr;
     }
+    /* rel_list不为空 ID，rel_list=> ID,ID,rel_list...每次解析rel_list中的第一个ID直至为空 */
     | COMMA ID rel_list {
       if ($3 != nullptr) {
         $$ = $3;
@@ -567,6 +656,24 @@ rel_list:
       free($2);
     }
     ;
+  
+rel_attr_aggr_list:
+    {
+      $$ = nullptr;
+    }
+    | COMMA rel_attr_aggr rel_attr_aggr_list {
+      if ($3 != nullptr) {
+        $$ = $3;
+      } else {
+        $$ = new std::vector<RelAttrSqlNode>;
+      }
+
+      $$->emplace_back(*$2);
+      delete $2;
+    }
+;
+/*--------------------------------------修改--------------------------------------------*/
+
 where:
     /* empty */
     {

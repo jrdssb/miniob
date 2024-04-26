@@ -11,6 +11,7 @@ See the Mulan PSL v2 for more details. */
 //
 // Created by Wangyunlai on 2022/6/6.
 //
+#include<iostream>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -29,12 +30,16 @@ SelectStmt::~SelectStmt()
   }
 }
 
-static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
+static void wildcard_fields(Table *table, std::vector<Field> &field_metas, AggrOp aggregation=AGGR_NONE)
 {
   const TableMeta &table_meta = table->table_meta();
   const int        field_num  = table_meta.field_num();
   for (int i = table_meta.sys_field_num(); i < field_num; i++) {
-    field_metas.push_back(Field(table, table_meta.field(i)));
+    if(aggregation==AggrOp::AGGR_COUNT){
+      field_metas.push_back(Field(table, table_meta.field(i), AggrOp::AGGR_COUNT_ALL));
+      break;
+    }
+    else field_metas.push_back(Field(table, table_meta.field(i), AggrOp::AGGR_NONE));
   }
 }
 
@@ -69,11 +74,22 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
   std::vector<Field> query_fields;
   for (int i = static_cast<int>(select_sql.attributes.size()) - 1; i >= 0; i--) {
     const RelAttrSqlNode &relation_attr = select_sql.attributes[i];
+    const AggrOp aggregation_=relation_attr.aggregation;
+
+    bool valid_=relation_attr.valid;
+    if(!valid_){
+        return RC::INVALID_ARGUMENT;
+    }
 
     if (common::is_blank(relation_attr.relation_name.c_str()) &&
         0 == strcmp(relation_attr.attribute_name.c_str(), "*")) {
+
+      if(aggregation_!=AggrOp::AGGR_NONE && aggregation_!=AggrOp::AGGR_COUNT){
+        return RC::INVALID_ARGUMENT;
+      }
+
       for (Table *table : tables) {
-        wildcard_fields(table, query_fields);
+        wildcard_fields(table, query_fields, aggregation_);
       }
 
     } else if (!common::is_blank(relation_attr.relation_name.c_str())) {
@@ -85,8 +101,11 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
           LOG_WARN("invalid field name while table is *. attr=%s", field_name);
           return RC::SCHEMA_FIELD_MISSING;
         }
+        if(aggregation_!=AggrOp::AGGR_NONE && aggregation_!=AggrOp::AGGR_COUNT){
+            return RC::INVALID_ARGUMENT;
+        }
         for (Table *table : tables) {
-          wildcard_fields(table, query_fields);
+          wildcard_fields(table, query_fields, aggregation_);
         }
       } else {
         auto iter = table_map.find(table_name);
@@ -97,7 +116,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
 
         Table *table = iter->second;
         if (0 == strcmp(field_name, "*")) {
-          wildcard_fields(table, query_fields);
+          wildcard_fields(table, query_fields, aggregation_);
         } else {
           const FieldMeta *field_meta = table->table_meta().field(field_name);
           if (nullptr == field_meta) {
@@ -105,7 +124,11 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
             return RC::SCHEMA_FIELD_MISSING;
           }
 
-          query_fields.push_back(Field(table, field_meta));
+          /*aggr->...->field.h,对Field类修改完成后，再回到select_stmt的定义部分增加聚合函数参数的传递
+          到目前为止，关于stmt的定义已经完成，接下来将在stmt的基础上进行算子的定义，而算子是数据库系统执行的依据。*/
+          const AggrOp aggregation_ = relation_attr.aggregation;
+
+          query_fields.push_back(Field(table, field_meta, aggregation_));
         }
       }
     } else {
@@ -121,7 +144,9 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
         return RC::SCHEMA_FIELD_MISSING;
       }
 
-      query_fields.push_back(Field(table, field_meta));
+      const AggrOp aggregation_ = relation_attr.aggregation;
+      //std::cout<<"stage2:pass aggregation function to filed"<<std::endl;
+      query_fields.push_back(Field(table, field_meta, aggregation_));
     }
   }
 
@@ -145,7 +170,9 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
     return rc;
   }
 
-  // everything alright
+
+  /*select_stmt需要传递的参数有tables, query_fields和filter_stmt_*/
+  // 从parse内容中得到这些参数，而聚合函数是field字段的一部分，为了支持聚合函数，需要从query——filed逆向分析
   SelectStmt *select_stmt = new SelectStmt();
   // TODO add expression copy
   select_stmt->tables_.swap(tables);

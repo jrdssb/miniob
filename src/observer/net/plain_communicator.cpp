@@ -201,10 +201,15 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
 
   const TupleSchema &schema   = sql_result->tuple_schema();
   const int          cell_num = schema.cell_num();
+  //std::cout<<"need to output attributes"<<std::endl;
+  std::vector<AggrOp> aggrVec=sql_result->getOperator().aggregationsRes;
 
   for (int i = 0; i < cell_num; i++) {
+
     const TupleCellSpec &spec  = schema.cell_at(i);
     const char          *alias = spec.alias();
+
+
     if (nullptr != alias || alias[0] != 0) {
       if (0 != i) {
         const char *delim = " | ";
@@ -243,8 +248,11 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
   Tuple *tuple = nullptr;
   while (RC::SUCCESS == (rc = sql_result->next_tuple(tuple))) {
     assert(tuple != nullptr);
+    //std::cout<<"get next tuple"<<std::endl;
 
     int cell_num = tuple->cell_num();
+    //std::cout<<"cell num is:"<<cell_num<<std::endl;
+
     for (int i = 0; i < cell_num; i++) {
       if (i != 0) {
         const char *delim = " | ";
@@ -260,11 +268,15 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       Value value;
       rc = tuple->cell_at(i, value);
       if (rc != RC::SUCCESS) {
+
+        //std::cout<<"fail to get number"<<std::endl;
         sql_result->close();
         return rc;
       }
 
+      //std::cout<<"value'float is:"<<value.get_float()<<std::endl;
       string cell_str = value.to_string();
+      //std::cout<<"value'string is:"<<cell_str<<std::endl;
 
       rc = writer_->writen(cell_str.data(), cell_str.size());
       if (OB_FAIL(rc)) {
@@ -285,6 +297,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
   }
 
   if (rc == RC::RECORD_EOF) {
+    //std::cout<<"no record left"<<std::endl;
     rc = RC::SUCCESS;
   }
 

@@ -41,6 +41,11 @@ RC Stmt::create_stmt(Db *db, ParsedSqlNode &sql_node, Stmt *&stmt)
     case SCF_DELETE: {
       return DeleteStmt::create(db, sql_node.deletion, stmt);
     }
+
+    /*select_stmt的创建入口
+    不同操作类型(select, insert, etc.)对应着不同的类，
+    但所有类都是由Stmt类继承，并对create_stmt函数进行重载而来的*/
+    /*aggr->...->selectStmt.cpp*/
     case SCF_SELECT: {
       return SelectStmt::create(db, sql_node.selection, stmt);
     }

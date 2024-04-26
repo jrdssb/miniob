@@ -974,7 +974,6 @@ RC MysqlCommunicator::send_result_rows(SqlResult *sql_result, bool no_column_def
         sql_result->set_return_code(rc);
         break;  // TODO send error packet
       }
-
       pos += store_lenenc_string(buf + pos, value.to_string().c_str());
     }
 

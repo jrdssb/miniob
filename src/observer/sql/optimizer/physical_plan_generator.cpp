@@ -34,6 +34,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/table_get_logical_operator.h"
 #include "sql/operator/table_scan_physical_operator.h"
 #include "sql/optimizer/physical_plan_generator.h"
+#include "sql/operator/aggregate_logical_operator.h"
+#include "sql/operator/aggregate_physical_operator.h"
 
 using namespace std;
 
@@ -41,6 +43,7 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
 {
   RC rc = RC::SUCCESS;
 
+  //会根据传入的logical_operator的type进行判断，进入对应的创建物理算子函数，每次会将新创建的算子存入oper
   switch (logical_operator.type()) {
     case LogicalOperatorType::CALC: {
       return create_plan(static_cast<CalcLogicalOperator &>(logical_operator), oper);
@@ -56,6 +59,10 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
 
     case LogicalOperatorType::PROJECTION: {
       return create_plan(static_cast<ProjectLogicalOperator &>(logical_operator), oper);
+    } break;
+
+    case LogicalOperatorType::AGGREGATE:{
+      return create_plan(static_cast<AggregateLogicalOperator &>(logical_operator), oper);
     } break;
 
     case LogicalOperatorType::INSERT: {
@@ -127,7 +134,9 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
     }
   }
 
+  //std::cout<<"whether need table initial"<<std::endl;
   if (index != nullptr) {
+        std::cout<<"error branch"<<std::endl;
     ASSERT(value_expr != nullptr, "got an index but value expr is null ?");
 
     const Value               &value           = value_expr->get_value();
@@ -289,5 +298,56 @@ RC PhysicalPlanGenerator::create_plan(CalcLogicalOperator &logical_oper, std::un
 
   CalcPhysicalOperator *calc_oper = new CalcPhysicalOperator(std::move(logical_oper.expressions()));
   oper.reset(calc_oper);
+  return rc;
+}
+
+//仿照其他的创建函数写法编写聚合逻辑算子的物理计划创建函数
+RC PhysicalPlanGenerator::create_plan(AggregateLogicalOperator &aggregate_oper,unique_ptr<PhysicalOperator> &oper)
+{
+  //std::cout<<"stage5:according to logical plan create pysical plan"<<std::endl;
+  //aggregate拥有子节点project，aggregate_oper中保存的是oper算子，首先创建chidren_opers向量引用指向project算子向量
+  vector<unique_ptr<LogicalOperator>> &children_opers=aggregate_oper.children();
+
+  ASSERT(children_opers.size()==1,"aggregate logical operator's sub oper number should be 1");
+
+  //child_oper先指向向量的第一个元素
+  LogicalOperator &child_oper=*children_opers.front();
+
+  //创建PhysicalOperator指针child_phy_oper
+  unique_ptr<PhysicalOperator> child_phy_oper;
+
+  //会根据对应的子节点算子type调用对应的create函数
+  RC rc=create(child_oper,child_phy_oper);
+
+  if(rc!=RC::SUCCESS){
+    LOG_WARN("failed to create child operator of predict operator.rc=%s",strrc(rc));
+    return rc;
+  }
+
+  //new一个aggregatePhysicalOperator算子
+  AggregatePhysicalOperator *aggregate_operator=new AggregatePhysicalOperator;
+
+  //获取需要聚合的属性向量引用，暂时将field理解为属性
+  const vector<Field> &aggregate_fields=aggregate_oper.fields();
+  LOG_TRACE("got %d aggregation fields",aggregate_fields.size());
+  
+  //field.aggregation()会返回创建该field时传入的aggregation参数，向aggregate_operator中加入该算子
+  for(const Field &field:aggregate_fields){
+    //std::cout<<"stage5:add aggregation"<<std::endl;
+    aggregate_operator->aggregationsRes.push_back(field.aggregation());
+    aggregate_operator->add_aggregation(field.aggregation());
+  }
+
+  //如果说该算子的子节点算子成功创建，需要使用add_child函数给该算子加入子算子child_phy_oper
+  if(child_phy_oper){
+    //std::cout<<"stage5:add child opration"<<std::endl;
+    aggregate_operator->add_child(std::move(child_phy_oper));
+  }
+
+  //至此加入aggregate算子的两个元素：子物理算子，聚合属性列，oper即为创建的物理逻辑算子
+  oper=unique_ptr<PhysicalOperator>(aggregate_operator);
+
+  LOG_TRACE("create a aggregate physical operator");
+  //std::cout<<"stage5:successfully create"<<std::endl;
   return rc;
 }

@@ -24,6 +24,7 @@ void SqlResult::set_tuple_schema(const TupleSchema &schema) { tuple_schema_ = sc
 
 RC SqlResult::open()
 {
+  //std::cout<<"need to open trx"<<std::endl;
   if (nullptr == operator_) {
     return RC::INVALID_ARGUMENT;
   }
@@ -64,7 +65,6 @@ RC SqlResult::next_tuple(Tuple *&tuple)
   if (rc != RC::SUCCESS) {
     return rc;
   }
-
   tuple = operator_->current_tuple();
   return rc;
 }

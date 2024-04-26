@@ -21,6 +21,9 @@ See the Mulan PSL v2 for more details. */
 #include "sql/parser/value.h"
 
 class Expression;
+/*文件中声明了不同类型节点的结构，例如选择节点结构，属性节点结构等等,
+成员一般用来存储语法解析步骤中得到的结果与此同时，该文件中也声明了一些后续便于在程序中进行判断分析的常量
+，例如CompOp，其中声明了一些比较运算符，在判断阶段可以根据对应的比较运算符标识来进行对应的比较运算操作。*/
 
 /**
  * @defgroup SQLParser SQL Parser
@@ -33,16 +36,39 @@ class Expression;
  * Rel -> Relation
  * Attr -> Attribute
  */
+
+/*----------------------------修改------------------------------*/
+/*仿照CompOp，定义CompOp*/
+/*aggr->...->resolve_stage*/
+enum AggrOp
+{
+  AGGR_SUM,
+  AGGR_MIN,
+  AGGR_MAX,
+  AGGR_AVG,
+  AGGR_COUNT,
+  AGGR_COUNT_ALL,
+  AGGR_NONE
+};
+/*----------------------------修改------------------------------*/
+
 struct RelAttrSqlNode
 {
   std::string relation_name;   ///< relation name (may be NULL) 表名
   std::string attribute_name;  ///< attribute name              属性名
+
+  /*----------------------------修改------------------------------*/
+  AggrOp    aggregation=AGGR_NONE;
+  bool valid=true;
+  /*----------------------------修改------------------------------*/
 };
 
 /**
  * @brief 描述比较运算符
  * @ingroup SQLParser
  */
+
+
 enum CompOp
 {
   EQUAL_TO,     ///< "="

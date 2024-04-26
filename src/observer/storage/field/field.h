@@ -14,6 +14,8 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+#include<iostream>
+
 #include "storage/field/field_meta.h"
 #include "storage/table/table.h"
 
@@ -21,11 +23,18 @@ See the Mulan PSL v2 for more details. */
  * @brief 字段
  *
  */
+ /*--------------------------------修改------------------------------------*/
 class Field
 {
 public:
   Field() = default;
-  Field(const Table *table, const FieldMeta *field) : table_(table), field_(field) {}
+  //添加聚合函数标识的变量成员及必要的成员函数
+  //在解析步骤字段不一定会使用聚合函数，所以需要设定默认值为无聚合操作，便于后续处理进行判断
+  /*aggr->...->select_stmt*/
+  Field(const Table *table, const FieldMeta *field, const AggrOp aggregation=AggrOp::AGGR_NONE):table_(table),field_(field),aggregation_(aggregation){
+    //std::cout<<"stage3:add aggregation function into field when creates select_stmt"<<std::endl;
+  }
+  //Field(const Table *table, const FieldMeta *field) : table_(table), field_(field) {}
   Field(const Field &) = default;
 
   const Table     *table() const { return table_; }
@@ -38,6 +47,9 @@ public:
 
   void set_table(const Table *table) { this->table_ = table; }
   void set_field(const FieldMeta *field) { this->field_ = field; }
+  
+  //修改
+  const AggrOp aggregation() const {return aggregation_;}
 
   void set_int(Record &record, int value);
   int  get_int(const Record &record);
@@ -47,4 +59,7 @@ public:
 private:
   const Table     *table_ = nullptr;
   const FieldMeta *field_ = nullptr;
+  //修改
+  AggrOp  aggregation_ = AggrOp::AGGR_NONE;
 };
+ /*--------------------------------修改------------------------------------*/

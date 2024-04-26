@@ -46,7 +46,11 @@ RC ResolveStage::handle_request(SQLStageEvent *sql_event)
   ParsedSqlNode *sql_node = sql_event->sql_node().get();
   Stmt          *stmt     = nullptr;
 
+  /*Resolve阶段就是对ParseSqlNode进一步处理从而得到更具体的节点类型的过程
+  解析得到的最终结果被称为”Statement”，缩写”Stmt”*/
+  /*aggr->...(parse_defs)->stmt.cpp*/
   rc = Stmt::create_stmt(db, *sql_node, stmt);
+
   if (rc != RC::SUCCESS && rc != RC::UNIMPLENMENT) {
     LOG_WARN("failed to create stmt. rc=%d:%s", rc, strrc(rc));
     sql_result->set_return_code(rc);

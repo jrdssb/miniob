@@ -52,8 +52,9 @@ class TupleSchema
 {
 public:
   void append_cell(const TupleCellSpec &cell) { cells_.push_back(cell); }
+  void append_cell(const char *table, const char *field, const AggrOp aggr=AGGR_NONE) { append_cell(TupleCellSpec(table, field, nullptr, aggr)); }
   void append_cell(const char *table, const char *field) { append_cell(TupleCellSpec(table, field)); }
-  void append_cell(const char *alias) { append_cell(TupleCellSpec(alias)); }
+  void append_cell(const char *alias, const AggrOp aggr=AGGR_NONE) { append_cell(TupleCellSpec(alias, aggr)); }
   int  cell_num() const { return static_cast<int>(cells_.size()); }
 
   const TupleCellSpec &cell_at(int i) const { return cells_[i]; }
@@ -153,7 +154,6 @@ public:
       LOG_WARN("invalid argument. index=%d", index);
       return RC::INVALID_ARGUMENT;
     }
-
     FieldExpr       *field_expr = speces_[index];
     const FieldMeta *field_meta = field_expr->field().meta();
     cell.set_type(field_meta->type());
@@ -163,9 +163,12 @@ public:
 
   RC find_cell(const TupleCellSpec &spec, Value &cell) const override
   {
+    //std::cout<<"into RowTuple find_cell function"<<std::endl;
     const char *table_name = spec.table_name();
     const char *field_name = spec.field_name();
+
     if (0 != strcmp(table_name, table_->name())) {
+      //std::cout<<"find failure"<<std::endl;
       return RC::NOTFOUND;
     }
 
@@ -173,9 +176,11 @@ public:
       const FieldExpr *field_expr = speces_[i];
       const Field     &field      = field_expr->field();
       if (0 == strcmp(field_name, field.field_name())) {
+        //std::cout<<"find a place to cell_at"<<std::endl;
         return cell_at(i, cell);
       }
     }
+    //std::cout<<"find failure"<<std::endl;
     return RC::NOTFOUND;
   }
 
@@ -233,12 +238,12 @@ public:
     if (tuple_ == nullptr) {
       return RC::INTERNAL;
     }
-
+    //std::cout<<"go into project cell_at"<<std::endl;
     const TupleCellSpec *spec = speces_[index];
     return tuple_->find_cell(*spec, cell);
   }
 
-  RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return tuple_->find_cell(spec, cell); }
+  RC find_cell(const TupleCellSpec &spec, Value &cell) const override {  return tuple_->find_cell(spec, cell); }
 
 #if 0
   RC cell_spec_at(int index, const TupleCellSpec *&spec) const override
@@ -281,6 +286,7 @@ public:
         return expr->try_get_value(cell);
       }
     }
+    //std::cout<<"fail to find"<<std::endl;
     return RC::NOTFOUND;
   }
 
