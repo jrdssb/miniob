@@ -277,6 +277,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       //std::cout<<"value'float is:"<<value.get_float()<<std::endl;
       string cell_str = value.to_string();
       //std::cout<<"value'string is:"<<cell_str<<std::endl;
+      //std::cout<<"value'string is:"<<value.get_string()<<std::endl;
 
       rc = writer_->writen(cell_str.data(), cell_str.size());
       if (OB_FAIL(rc)) {

@@ -70,6 +70,8 @@ RC AggregatePhysicalOperator::next(){
     float max=FLT_MIN;
     //用来保存date结果
     std::string date_string="";
+    //char默认值
+    std::string char_string="";
 
     while(RC::SUCCESS==(rc=oper->next())){
         //get tuple
@@ -126,11 +128,24 @@ RC AggregatePhysicalOperator::next(){
                           //const char* cStr = date_string.c_str();  
                           value_series[cell_idx].set_date(temp_date);
                         }
-
+                    }else if(attr_type==AttrType::CHARS){
+                        //获得cell中的string数据
+                        std::string temp_str=cell.get_string();
+                        if(char_string.length()==0){
+                          int length=char_string.length();
+                          char_string=temp_str;
+                          value_series[cell_idx].set_string(char_string.c_str(),length);
+                        }
+                        //比较：result<0 temp_str小于char_string
+                        int result=char_string.compare(temp_str);
+                        if(result<0){
+                          int length=char_string.length();
+                          //需要修改最大值
+                          char_string=temp_str;
+                          value_series[cell_idx].set_string(char_string.c_str(),length);
+                        }
+                        //std::cout<<"now string="<<value_series[cell_idx].get_string()<<std::endl;
                     }
-                    //else if (attr_type==AttrType::CHARS){
-                      //request：需要实现char
-                    //}
                     break;
                 case AggrOp::AGGR_MIN:
                     rc=tuple->cell_at(cell_idx,cell);
@@ -153,7 +168,23 @@ RC AggregatePhysicalOperator::next(){
                           //const char* cStr = date_string.c_str();
                           value_series[cell_idx].set_date(temp_date);
                         }
-
+                    }else if(attr_type==AttrType::CHARS){
+                      //获得cell中的string数据
+                        std::string temp_str=cell.get_string();
+                        if(char_string.length()==0){
+                          int length=char_string.length();
+                          char_string=temp_str;
+                          value_series[cell_idx].set_string(char_string.c_str(),length);
+                        }
+                        //比较：result<0 char_string小于temp_str
+                        int result=temp_str.compare(char_string);
+                        if(result<0){
+                          //需要修改最大值
+                          int length=char_string.length();
+                          char_string=temp_str;
+                          value_series[cell_idx].set_string(char_string.c_str(),length);
+                        }
+                        //std::cout<<"now string="<<value_series[cell_idx].get_string()<<std::endl;
                     }
                     break;
                 case AggrOp::AGGR_COUNT:
@@ -187,6 +218,8 @@ RC AggregatePhysicalOperator::next(){
             result_cells[i].set_float(value_series[i].get_float());
           else if(value_series[i].attr_type()==AttrType::DATES){
             result_cells[i].set_date(value_series[i].get_date());
+          }else if(value_series[i].attr_type()==AttrType::CHARS){
+            result_cells[i].set_string(value_series[i].get_string().c_str());
           }
         }
         //std::cout<<std::endl;

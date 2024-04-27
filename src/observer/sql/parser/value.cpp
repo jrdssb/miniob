@@ -142,7 +142,7 @@ void Value::set_boolean(bool val)
   num_value_.bool_value_ = val;
   length_                = sizeof(val);
 }
-void Value::set_string(const char *s, int len /*= 0*/)
+void Value::set_string(const char *s, int len )
 {
   attr_type_ = CHARS;
   if (len > 0) {
