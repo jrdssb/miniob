@@ -92,7 +92,7 @@ RC AggregatePhysicalOperator::next(){
 
                     if(attr_type==AttrType::INTS or attr_type == AttrType::FLOATS){
                         temp+=cell.get_float();
-                        value_series[cell_idx].set_float(cell.get_float());
+                        value_series[cell_idx].set_float(temp);
                     }
                     break;
                 case AggrOp::AGGR_AVG:

@@ -33,6 +33,7 @@ void aggr_to_string(AggrOp agg, std::string &s){
         s="MIN";
       } break;
       default:
+        s="SUM";
         return;
   }
 }
