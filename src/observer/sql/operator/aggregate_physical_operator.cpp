@@ -190,18 +190,12 @@ RC AggregatePhysicalOperator::next(){
                 case AggrOp::AGGR_COUNT:
                     rc=tuple->cell_at(cell_idx,cell);
                     attr_type=cell.attr_type();
-
-                    if(attr_type==AttrType::INTS or attr_type == AttrType::FLOATS){
-                        value_series[cell_idx].set_float(value_series[cell_idx].get_float()+1);
-                    }
+                    value_series[cell_idx].set_float(value_series[cell_idx].get_float()+1);
                     break;
                 case AggrOp::AGGR_COUNT_ALL:
                     rc=tuple->cell_at(cell_idx,cell);
                     attr_type=cell.attr_type();
-
-                    if(attr_type==AttrType::INTS or attr_type == AttrType::FLOATS){
-                        value_series[cell_idx].set_float(value_series[cell_idx].get_float()+1);
-                    }
+                    value_series[cell_idx].set_float(value_series[cell_idx].get_float()+1);
                     break;
                 default:
                     return RC::UNIMPLENMENT;
