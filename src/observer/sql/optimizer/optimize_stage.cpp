@@ -90,6 +90,8 @@ RC OptimizeStage::generate_physical_plan(
   rc    = physical_plan_generator_.create(*logical_operator, physical_operator);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to create physical operator. rc=%s", strrc(rc));
+  }else if(rc==RC::INVALID_ARGUMENT){
+    rc=RC::INVALID_ARGUMENT;
   }
   return rc;
 }

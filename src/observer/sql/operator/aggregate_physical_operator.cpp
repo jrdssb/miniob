@@ -76,6 +76,7 @@ RC AggregatePhysicalOperator::next(){
     while(RC::SUCCESS==(rc=oper->next())){
         //get tuple
         //这里调用了project算子的current_tuple函数会返回project算子中的ProjectTuple变量,同时会执行set_tuple函数
+
         Tuple* tuple=oper->current_tuple();
 
         //do aggregate

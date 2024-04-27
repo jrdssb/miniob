@@ -332,6 +332,7 @@ RC PhysicalPlanGenerator::create_plan(AggregateLogicalOperator &aggregate_oper,u
   LOG_TRACE("got %d aggregation fields",aggregate_fields.size());
   
   //field.aggregation()会返回创建该field时传入的aggregation参数，向aggregate_operator中加入该算子
+
   for(const Field &field:aggregate_fields){
     //std::cout<<"stage5:add aggregation"<<std::endl;
     aggregate_operator->aggregationsRes.push_back(field.aggregation());

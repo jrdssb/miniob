@@ -71,10 +71,24 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
   }
 
   // collect query fields in `select` statement
+  int index=0;
+  AggrOp ag=AggrOp::AGGR_NONE;
   std::vector<Field> query_fields;
   for (int i = static_cast<int>(select_sql.attributes.size()) - 1; i >= 0; i--) {
     const RelAttrSqlNode &relation_attr = select_sql.attributes[i];
     const AggrOp aggregation_=relation_attr.aggregation;
+
+    if(index==0){
+      index++;
+      ag=aggregation_;
+    }else{
+      if(ag==AggrOp::AGGR_NONE&&aggregation_!=AggrOp::AGGR_NONE){
+      //返回失败信息
+        return RC::INVALID_ARGUMENT;
+      }else if(ag!=AggrOp::AGGR_NONE&&aggregation_==AggrOp::AGGR_NONE){
+          return RC::INVALID_ARGUMENT;
+      }
+    }
 
     bool valid_=relation_attr.valid;
     if(!valid_){
