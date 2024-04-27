@@ -6,6 +6,22 @@
 #include "storage/trx/trx.h"
 #include "sql/parser/value.h"
 
+void int2Str(std::string &strDate,int intDate){
+  int temp=0;
+  temp=intDate/10000;
+  strDate+=std::to_string(temp)+"-";
+  temp=(intDate%10000)/100;
+  if(temp<10)
+    strDate+="0"+std::to_string(temp)+"-";
+  else
+    strDate+=std::to_string(temp)+"-";
+  temp=intDate%100;
+  if(temp<10)
+    strDate+="0"+std::to_string(temp);
+  else
+    strDate+=std::to_string(temp);
+}
+
 RC AggregatePhysicalOperator::open(Trx *trx)
 {
   if (children_.empty()) {
@@ -37,11 +53,12 @@ RC AggregatePhysicalOperator::next(){
 
     std::vector<Value> result_cells;
 
-    //结果向量
-    float*series_float=new float[(int)aggregations_.size()];
+    //结果向量,为了支持char和date，需要将float类型改为Value
+    Value* value_series =new Value[(int)aggregations_.size()];
     
     for(int i=0;i<(int)aggregations_.size();i++){
-      series_float[i]=0;
+      //这里需要set
+      value_series[i].set_float(0);
     }
 
     //while每次取一条记录，也就是说while会访问一个属性所有元
@@ -51,6 +68,8 @@ RC AggregatePhysicalOperator::next(){
     float temp=0;
     float min=FLT_MAX;
     float max=FLT_MIN;
+    //用来保存date结果
+    std::string date_string="";
 
     while(RC::SUCCESS==(rc=oper->next())){
         //get tuple
@@ -71,7 +90,7 @@ RC AggregatePhysicalOperator::next(){
 
                     if(attr_type==AttrType::INTS or attr_type == AttrType::FLOATS){
                         temp+=cell.get_float();
-                        series_float[cell_idx]+=cell.get_float();
+                        value_series[cell_idx].set_float(cell.get_float());
                     }
                     break;
                 case AggrOp::AGGR_AVG:
@@ -82,9 +101,10 @@ RC AggregatePhysicalOperator::next(){
                         count+=1;
                         avg_total+=cell.get_float();
                         avg=avg_total/count;
-                        series_float[cell_idx]=avg;
+                        value_series[cell_idx].set_float(avg);
                     }
                     break;
+                //理论上date和char类型数据没办法求平均或者求和，同时count不受属性影响，因此先实现最大最小的比较
                 case AggrOp::AGGR_MAX:
                     rc=tuple->cell_at(cell_idx,cell);
                     attr_type=cell.attr_type();
@@ -92,10 +112,25 @@ RC AggregatePhysicalOperator::next(){
                     if(attr_type==AttrType::INTS or attr_type == AttrType::FLOATS){
                         float tempCell_float=cell.get_float();
                         if(tempCell_float>max){
-                          series_float[cell_idx]=tempCell_float;
+                          value_series[cell_idx].set_float(tempCell_float);
                           max=tempCell_float;
                         }
+                    }else if (attr_type==AttrType::DATES){
+                        //获得int类型的日期
+                        int temp_date=cell.get_date();
+                        //与max比较，如果大执行以下步骤
+                        if(temp_date>max){
+                          max=temp_date;
+                          //int2Str(date_string,temp_date);
+                          //调用函数转化为string并set到value_series当中
+                          //const char* cStr = date_string.c_str();  
+                          value_series[cell_idx].set_date(temp_date);
+                        }
+
                     }
+                    //else if (attr_type==AttrType::CHARS){
+                      //request：需要实现char
+                    //}
                     break;
                 case AggrOp::AGGR_MIN:
                     rc=tuple->cell_at(cell_idx,cell);
@@ -104,9 +139,21 @@ RC AggregatePhysicalOperator::next(){
                     if(attr_type==AttrType::INTS or attr_type == AttrType::FLOATS){
                         float tempCell_float=cell.get_float();
                         if(tempCell_float<min){
-                            series_float[cell_idx]=tempCell_float;
+                            value_series[cell_idx].set_float(tempCell_float);
                             min=tempCell_float;
                         }
+                    }else if (attr_type==AttrType::DATES){
+                        //获得int类型的日期
+                        int temp_date=cell.get_date();
+                        //与max比较，如果大执行以下步骤
+                        if(temp_date<min){
+                          max=temp_date;
+                          //int2Str(date_string,temp_date);
+                          //调用函数转化为string并set到value_series当中
+                          //const char* cStr = date_string.c_str();
+                          value_series[cell_idx].set_date(temp_date);
+                        }
+
                     }
                     break;
                 case AggrOp::AGGR_COUNT:
@@ -114,7 +161,7 @@ RC AggregatePhysicalOperator::next(){
                     attr_type=cell.attr_type();
 
                     if(attr_type==AttrType::INTS or attr_type == AttrType::FLOATS){
-                        series_float[cell_idx]+=1;
+                        value_series[cell_idx].set_float(value_series[cell_idx].get_float()+1);
                     }
                     break;
                 case AggrOp::AGGR_COUNT_ALL:
@@ -122,7 +169,7 @@ RC AggregatePhysicalOperator::next(){
                     attr_type=cell.attr_type();
 
                     if(attr_type==AttrType::INTS or attr_type == AttrType::FLOATS){
-                        series_float[cell_idx]+=1;
+                        value_series[cell_idx].set_float(value_series[cell_idx].get_float()+1);
                     }
                     break;
                 default:
@@ -131,12 +178,16 @@ RC AggregatePhysicalOperator::next(){
         }
     }
     if(rc==RC::RECORD_EOF){
-        //std::cout<<"series_float array is:";
+        //std::cout<<"value_series  array is:";
         for(int i=0;i<(int)aggregations_.size();i++){
-          //<<series_float[i]<<" ";
+          //<<value_series [i]<<" ";
           Value *p=new Value();
           result_cells.push_back(*p);
-          result_cells[i].set_float(series_float[i]);
+          if(value_series[i].attr_type()==AttrType::INTS or value_series[i].attr_type()==AttrType::FLOATS)
+            result_cells[i].set_float(value_series[i].get_float());
+          else if(value_series[i].attr_type()==AttrType::DATES){
+            result_cells[i].set_date(value_series[i].get_date());
+          }
         }
         //std::cout<<std::endl;
         result_tuple_.set_cells(result_cells);
