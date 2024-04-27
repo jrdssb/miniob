@@ -132,16 +132,16 @@ RC AggregatePhysicalOperator::next(){
                         //获得cell中的string数据
                         std::string temp_str=cell.get_string();
                         if(char_string.length()==0){
-                          int length=char_string.length();
                           char_string=temp_str;
+                          int length=char_string.length();
                           value_series[cell_idx].set_string(char_string.c_str(),length);
                         }
                         //比较：result<0 temp_str小于char_string
                         int result=char_string.compare(temp_str);
                         if(result<0){
+                          char_string=temp_str;
                           int length=char_string.length();
                           //需要修改最大值
-                          char_string=temp_str;
                           value_series[cell_idx].set_string(char_string.c_str(),length);
                         }
                         //std::cout<<"now string="<<value_series[cell_idx].get_string()<<std::endl;
@@ -172,16 +172,16 @@ RC AggregatePhysicalOperator::next(){
                       //获得cell中的string数据
                         std::string temp_str=cell.get_string();
                         if(char_string.length()==0){
-                          int length=char_string.length();
                           char_string=temp_str;
+                          int length=char_string.length();
                           value_series[cell_idx].set_string(char_string.c_str(),length);
                         }
                         //比较：result<0 char_string小于temp_str
                         int result=temp_str.compare(char_string);
                         if(result<0){
                           //需要修改最大值
-                          int length=char_string.length();
                           char_string=temp_str;
+                          int length=char_string.length();
                           value_series[cell_idx].set_string(char_string.c_str(),length);
                         }
                         //std::cout<<"now string="<<value_series[cell_idx].get_string()<<std::endl;
