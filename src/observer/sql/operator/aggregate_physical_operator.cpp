@@ -147,7 +147,7 @@ RC AggregatePhysicalOperator::next(){
                         int temp_date=cell.get_date();
                         //与max比较，如果大执行以下步骤
                         if(temp_date<min){
-                          max=temp_date;
+                          min=temp_date;
                           //int2Str(date_string,temp_date);
                           //调用函数转化为string并set到value_series当中
                           //const char* cStr = date_string.c_str();
