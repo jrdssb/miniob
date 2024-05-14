@@ -32,6 +32,9 @@ void aggr_to_string(AggrOp agg, std::string &s){
       case AggrOp::AGGR_MIN:{
         s="MIN";
       } break;
+      case AggrOp::AGGR_NONE:{
+        s="";
+      }break;
       default:
         s="SUM";
         return;
@@ -61,6 +64,8 @@ TupleCellSpec::TupleCellSpec(const char *table_name, const char *field_name, con
 
     if(aggr_==AggrOp::AGGR_COUNT_ALL){
       alias_="COUNT(*)";
+    } else if(aggr_==AggrOp::AGGR_NONE){
+      //不需要聚合
     } else if(aggr_ != AggrOp::AGGR_COUNT_ALL){
       std::string aggr_repr;
       aggr_to_string(aggr_,aggr_repr);
@@ -79,6 +84,8 @@ TupleCellSpec::TupleCellSpec(const char *alias,const AggrOp aggr=AGGR_NONE)
     alias_ = alias;
     if(aggr_==AggrOp::AGGR_COUNT_ALL){
       alias_="COUNT(*)";
+    } else if(aggr_==AggrOp::AGGR_NONE){
+      //不需要聚合
     } else if(aggr_ != AggrOp::AGGR_COUNT_ALL){
       std::string aggr_repr;
       aggr_to_string(aggr_,aggr_repr);

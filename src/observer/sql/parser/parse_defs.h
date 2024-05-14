@@ -333,6 +333,7 @@ public:
 public:
   ParsedSqlNode();
   explicit ParsedSqlNode(SqlCommandFlag flag);
+  //flag表示解析出来的操作时select、delete、还是update
 };
 
 /**

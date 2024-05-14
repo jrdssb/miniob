@@ -36,6 +36,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/optimizer/physical_plan_generator.h"
 #include "sql/operator/aggregate_logical_operator.h"
 #include "sql/operator/aggregate_physical_operator.h"
+#include "sql/operator/update_logical_operator.h"
+#include "sql/operator/update_physical_operator.h"
 
 using namespace std;
 
@@ -68,6 +70,10 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
     case LogicalOperatorType::INSERT: {
       return create_plan(static_cast<InsertLogicalOperator &>(logical_operator), oper);
     } break;
+
+    case LogicalOperatorType::UPDATE: {
+      return create_plan(static_cast<UpdateLogicalOperator &>(logical_operator), oper);
+    }break;
 
     case LogicalOperatorType::DELETE: {
       return create_plan(static_cast<DeleteLogicalOperator &>(logical_operator), oper);
@@ -327,7 +333,7 @@ RC PhysicalPlanGenerator::create_plan(AggregateLogicalOperator &aggregate_oper,u
   //new一个aggregatePhysicalOperator算子
   AggregatePhysicalOperator *aggregate_operator=new AggregatePhysicalOperator;
 
-  //获取需要聚合的属性向量引用，暂时将field理解为属性
+  //获取需要聚合的属性向量引用
   const vector<Field> &aggregate_fields=aggregate_oper.fields();
   LOG_TRACE("got %d aggregation fields",aggregate_fields.size());
   
@@ -350,5 +356,28 @@ RC PhysicalPlanGenerator::create_plan(AggregateLogicalOperator &aggregate_oper,u
 
   LOG_TRACE("create a aggregate physical operator");
   //std::cout<<"stage5:successfully create"<<std::endl;
+  return rc;
+}
+
+RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper,unique_ptr<PhysicalOperator> &oper)
+{
+  vector<unique_ptr<LogicalOperator>> &child_opers=update_oper.children();
+
+  unique_ptr<PhysicalOperator> child_physical_oper;
+
+  RC rc=RC::SUCCESS;
+  if(!child_opers.empty()){
+    LogicalOperator *child_oper=child_opers.front().get();
+    rc=create(*child_oper,child_physical_oper);
+    if(rc!=RC::SUCCESS){
+      return rc;
+    }
+  }
+
+  oper=unique_ptr<PhysicalOperator>(new UpdatePhysicalOperator(update_oper.table(),update_oper.field(),update_oper.value(),update_oper.change_vals()));
+  if(child_physical_oper){
+    oper->add_child(std::move(child_physical_oper));
+  }
+
   return rc;
 }

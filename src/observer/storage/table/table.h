@@ -85,6 +85,8 @@ public:
 
   RecordFileHandler *record_handler() const { return record_handler_; }
 
+  RC update_record(Record &record,int offset, int len, Value&calue);
+
 public:
   int32_t     table_id() const { return table_meta_.table_id(); }
   const char *name() const;

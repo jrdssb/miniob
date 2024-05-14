@@ -199,6 +199,8 @@ public:
    */
   bool is_full() const;
 
+  RC update_record(RID *rid,int offset,int len,Value&value);
+
 protected:
   /**
    * @details
@@ -305,6 +307,8 @@ public:
    * @param visitor  访问记录的回调函数
    */
   RC visit_record(const RID &rid, bool readonly, std::function<void(Record &)> visitor);
+
+  RC update_record(RID *rid,int offset,int len,Value&value);
 
 private:
   /**
