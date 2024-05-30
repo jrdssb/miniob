@@ -86,6 +86,9 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         MIN_F
         COUNT_F
         /*定义解析规则*/
+
+        INNER
+        JOIN
 /*--------------------------------修改---------------------------------*/
 
         HELP
@@ -128,6 +131,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 
   std::vector<RelAttrSqlNode> *     rel_attr_list;
 
+  JoinSqlNode *                     join_sql_node;                                                                                 
+
   std::vector<std::string> *        relation_list;
   char *                            string;
   int                               number;
@@ -160,6 +165,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 
 %type <rel_attr_list>       attr_list
 %type <rel_attr_list>       rel_attr_aggr_list
+
+%type <join_sql_node>       join_list
 
 %type <expression>          expression
 %type <expression_list>     expression_list
@@ -448,7 +455,7 @@ update_stmt:      /*  update 语句的语法解析树*/
 
 /*--------------------------------------修改--------------------------------------------*/
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT select_attr FROM ID rel_list where
+    SELECT select_attr FROM ID rel_list join_list where
     /*1.rel_list是一个递归解析结构*/
     /*2.对select_attr的属性增加一个聚合的标识，在后续处理时根据聚合标识来进行判断*/
     {
@@ -464,13 +471,48 @@ select_stmt:        /*  select 语句的语法解析树*/
       $$->selection.relations.push_back($4);
       std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
 
-      if ($6 != nullptr) {
-        $$->selection.conditions.swap(*$6);
-        delete $6;
+      if ($7 != nullptr) {
+        $$->selection.conditions.swap(*$7);
+        delete $7;
       }
       free($4);
+
+      if($6!=nullptr){
+        $$->selection.relations.insert($$->selection.relations.end(),$6->relations.begin(),$6->relations.end());
+        $$->selection.conditions.insert($$->selection.conditions.end(),$6->conditions.begin(),$6->conditions.end());
+        delete $6;
+      }
     }
     ;
+
+join_list:
+/*需要初始化conditions和relations属性*/
+    {
+      $$=nullptr;
+    }
+    | INNER join_list{
+      if($2!=nullptr)
+        $$=$2;
+      else 
+        $$=new JoinSqlNode();
+    }
+    | JOIN ID ON condition_list join_list{
+        $$=new JoinSqlNode();
+        if($4 != nullptr){
+          $$->conditions.swap(*$4);
+          delete $4;
+        }
+        $$->relations.push_back($2);
+        free($2);
+
+        if($5!=nullptr){
+          $$->relations.insert($$->relations.end(),$5->relations.begin(),$5->relations.end());
+          $$->conditions.insert($$->conditions.end(),$5->conditions.begin(),$5->conditions.end());
+          delete($5);
+        }
+    }
+
+
 /*--------------------------------------修改--------------------------------------------*/
 
 calc_stmt:

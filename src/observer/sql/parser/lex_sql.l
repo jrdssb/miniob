@@ -118,6 +118,9 @@ MAX                                     RETURN_TOKEN(MAX_F);
 MIN                                     RETURN_TOKEN(MIN_F);
 COUNT                                   RETURN_TOKEN(COUNT_F);
 
+INNER                                   RETURN_TOKEN(INNER);
+JOIN                                    RETURN_TOKEN(JOIN);
+
 LOAD                                    RETURN_TOKEN(LOAD);
 DATA                                    RETURN_TOKEN(DATA);
 INFILE                                  RETURN_TOKEN(INFILE);
