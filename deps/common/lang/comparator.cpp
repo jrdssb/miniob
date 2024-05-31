@@ -70,4 +70,32 @@ int compare_date(void* arg1,void* arg2)
   return compare_int(arg1,arg2);
 }
 
+int compare_str_with_float(void*arg1,int arg1_max_length,void *arg2)
+{
+  const char*s1=(const char*)arg1;
+  float v2=*(float *)arg2;
+  float v1=atof(s1);
+  float cmp=v1-v2;
+  if(cmp>EPSILON){
+    return 1;
+  }else if(cmp<-EPSILON){
+    return -1;
+  }
+  return 0;
+}
+
+int compare_str_with_int(void*arg1,int arg1_max_length,void *arg2)
+{
+    const char*s1=(const char*)arg1;
+    float v2=*(float *)arg2;
+    float v1=atoi(s1);
+    float cmp=v1-v2;
+    if(cmp>0){
+      return 1;
+    }else if(cmp<0){
+      return -1;
+    }
+    return 0;
+}
+
 }  // namespace common
